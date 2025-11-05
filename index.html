@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMRIT CHO Performance Analytics Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1>AMRIT CHO Performance Analytics</h1>
+                    <p>Darrang District, Assam - 101 CHOs across 4 Blocks</p>
+                </div>
+                <div class="header-right">
+                    <button id="themeToggle" class="btn btn--outline theme-toggle">
+                        <span id="themeIcon">🌙</span> <span id="themeText">Cool Theme</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <nav class="tab-navigation">
+            <button class="tab-btn active" data-tab="overview">Overview</button>
+            <button class="tab-btn" data-tab="block-analysis">Block Analysis</button>
+            <button class="tab-btn" data-tab="hwc-services">HWC Services</button>
+            <button class="tab-btn" data-tab="cho-directory">CHO Directory</button>
+            <button class="tab-btn" data-tab="performance-monitor">Performance Monitor</button>
+            <button class="tab-btn" data-tab="alerts">Alerts &amp; Notifications</button>
+        </nav>
+
+        <!-- Tab Content -->
+        <main class="tab-content">
+            <!-- Overview Tab -->
+            <div id="overview" class="tab-pane active">
+                <!-- Enhanced Filters -->
+                <div class="filters-section enhanced-filters">
+                    <h3>Advanced Filters</h3>
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label class="form-label">District</label>
+                            <select id="districtFilter" class="form-control">
+                                <option value="darrang">Darrang District</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Block</label>
+                            <select id="blockFilter" class="form-control">
+                                <option value="all">All Blocks</option>
+                                <option value="kharupetia">KHARUPETIA</option>
+                                <option value="patharighat">PATHARIGHAT</option>
+                                <option value="sipajhar">SIPAJHAR</option>
+                                <option value="jaljali">JALJALI</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">HWC List</label>
+                            <select id="hwcFilter" class="form-control">
+                                <option value="all">All HWCs</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Time Period</label>
+                            <select id="timePeriodFilter" class="form-control">
+                                <option value="weekly">Weekly</option>
+                                <option value="daily">Daily</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="quarterly">Quarterly</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" id="startDateFilter" class="form-control" value="2024-08-14">
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">End Date</label>
+                            <input type="date" id="endDateFilter" class="form-control" value="2024-09-04">
+                        </div>
+                    </div>
+                    <div class="filter-actions">
+                        <button id="applyFilters" class="btn btn--primary btn--lg">
+                            <span id="loadingSpinner" class="spinner hidden">⏳</span>
+                            Apply Filters
+                        </button>
+                        <button id="resetFilters" class="btn btn--secondary">
+                            Reset Filters
+                        </button>
+                        <button id="downloadExcel" class="btn btn--success excel-btn">
+                            📊 Export Excel Report
+                        </button>
+                        <div id="activeFilters" class="active-filters-badge hidden">
+                            <span class="badge-count">0</span> filters active
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enhanced Metric Cards -->
+                <div class="metric-cards enhanced-metrics">
+                    <div class="card metric-card" data-metric="chos">
+                        <div class="metric-number" id="totalChosMetric">101</div>
+                        <div class="metric-label">Total CHOs</div>
+                        <div class="metric-trend" id="chosTrend"></div>
+                    </div>
+                    <div class="card metric-card" data-metric="blocks">
+                        <div class="metric-number" id="totalBlocksMetric">4</div>
+                        <div class="metric-label">Blocks</div>
+                        <div class="metric-trend" id="blocksTrend"></div>
+                    </div>
+                    <div class="card metric-card" data-metric="facilities">
+                        <div class="metric-number" id="totalFacilitiesMetric">100</div>
+                        <div class="metric-label">Facilities</div>
+                        <div class="metric-trend" id="facilitiesTrend"></div>
+                    </div>
+                    <div class="card metric-card" data-metric="coordinators">
+                        <div class="metric-number" id="totalCoordinatorsMetric">8</div>
+                        <div class="metric-label">Coordinators</div>
+                        <div class="metric-trend" id="coordinatorsTrend"></div>
+                    </div>
+                    <div class="card metric-card metric-card--highlight" data-metric="opd">
+                        <div class="metric-number" id="totalOpdMetric">1,556</div>
+                        <div class="metric-label">Total OPD</div>
+                        <div class="metric-trend" id="opdTrend">📈 854+242+238+222</div>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loadingState" class="loading-state hidden">
+                    <div class="loading-spinner">⏳</div>
+                    <div class="loading-text">Applying filters and updating data...</div>
+                </div>
+
+                <!-- Block Performance Visualization -->
+                <div class="card">
+                    <div class="card__header">
+                        <h3>Block Performance Overview</h3>
+                    </div>
+                    <div class="card__body">
+                        <div class="block-performance">
+                            <div class="block-item block-excellent" data-block="kharupetia">
+                                <h4>KHARUPETIA</h4>
+                                <div class="block-stats">78.7% Activity</div>
+                            </div>
+                            <div class="block-item block-critical" data-block="patharighat">
+                                <h4>PATHARIGHAT</h4>
+                                <div class="block-stats">22.1% Activity</div>
+                            </div>
+                            <div class="block-item block-moderate" data-block="sipajhar">
+                                <h4>SIPAJHAR</h4>
+                                <div class="block-stats">48.1% Activity</div>
+                            </div>
+                            <div class="block-item block-good" data-block="jaljali">
+                                <h4>JALJALI</h4>
+                                <div class="block-stats">54.2% Activity</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="charts-row">
+                    <div class="card chart-container">
+                        <div class="card__header">
+                            <h3>Weekly Activity Rate</h3>
+                        </div>
+                        <div class="card__body">
+                            <canvas id="activityChart" height="300"></canvas>
+                        </div>
+                    </div>
+                    <div class="card chart-container">
+                        <div class="card__header">
+                            <h3>OPD Trend</h3>
+                        </div>
+                        <div class="card__body">
+                            <canvas id="opdChart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Coordinator Performance -->
+                <div class="card">
+                    <div class="card__header">
+                        <h3>Coordinator Performance Comparison</h3>
+                    </div>
+                    <div class="card__body">
+                        <canvas id="coordinatorChart" height="400"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Block Analysis Tab -->
+            <div id="block-analysis" class="tab-pane">
+                <div class="filters-section">
+                    <h3>Block Analysis Filters</h3>
+                    <div class="filters-row">
+                        <select id="blockAnalysisFilter" class="form-control">
+                            <option value="all">All Blocks</option>
+                            <option value="kharupetia">KHARUPETIA</option>
+                            <option value="patharighat">PATHARIGHAT</option>
+                            <option value="sipajhar">SIPAJHAR</option>
+                            <option value="jaljali">JALJALI</option>
+                        </select>
+                        <select id="weekAnalysisFilter" class="form-control">
+                            <option value="week3">Week 3</option>
+                            <option value="week2">Week 2</option>
+                            <option value="week1">Week 1</option>
+                            <option value="baseline">Baseline</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Coordinator Performance Chart -->
+                <div class="card">
+                    <div class="card__header">
+                        <h3>8 Coordinators Performance Comparison</h3>
+                    </div>
+                    <div class="card__body">
+                        <canvas id="allCoordinatorsChart" height="400"></canvas>
+                    </div>
+                </div>
+
+                <!-- Block Comparison Table -->
+                <div class="card">
+                    <div class="card__header">
+                        <h3>Block Comparison</h3>
+                    </div>
+                    <div class="card__body">
+                        <div class="table-responsive">
+                            <table class="comparison-table">
+                                <thead>
+                                    <tr>
+                                        <th>Block</th>
+                                        <th>Total CHOs</th>
+                                        <th>Active CHOs</th>
+                                        <th>Activity Rate</th>
+                                        <th>Total OPD</th>
+                                        <th>Avg OPD per CHO</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="blockComparisonTable">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Coordinator Details -->
+                <div class="card">
+                    <div class="card__header">
+                        <h3>Coordinator Details</h3>
+                    </div>
+                    <div class="card__body">
+                        <div id="coordinatorDetails" class="coordinator-grid">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HWC Services Tab -->
+            <div id="hwc-services" class="tab-pane">
+                <!-- Enhanced Filters Section -->
+                <div class="filters-section enhanced-filters">
+                    <h3>HWC Services Filters</h3>
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label class="form-label">District</label>
+                            <select id="hwcDistrictFilter" class="form-control">
+                                <option value="darrang">Darrang District</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Block</label>
+                            <select id="hwcBlockFilter" class="form-control">
+                                <option value="all">All Blocks</option>
+                                <option value="kharupetia">KHARUPETIA</option>
+                                <option value="patharighat">PATHARIGHAT</option>
+                                <option value="sipajhar">SIPAJHAR</option>
+                                <option value="jaljali">JALJALI</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">HWC List</label>
+                            <select id="hwcListFilter" class="form-control">
+                                <option value="all">All HWCs</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">HWC Service</label>
+                            <select id="hwcServiceFilter" class="form-control">
+                                <option value="all">All Services</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Time Period</label>
+                            <select id="hwcTimePeriodFilter" class="form-control">
+                                <option value="weekly">Weekly</option>
+                                <option value="daily">Daily</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="quarterly">Quarterly</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Date Range</label>
+                            <input type="date" id="hwcStartDate" class="form-control" value="2024-08-14">
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">End Date</label>
+                            <input type="date" id="hwcEndDate" class="form-control" value="2024-09-04">
+                        </div>
+                    </div>
+                    <div class="filter-actions">
+                        <button id="applyHwcFilters" class="btn btn--primary btn--lg">Apply Filters</button>
+                        <button id="resetHwcFilters" class="btn btn--secondary">Reset Filters</button>
+                        <button id="downloadHwcExcel" class="btn btn--success excel-btn">📊 Export Excel Report</button>
+                    </div>
+                </div>
+
+                <!-- Service Cards Grid -->
+                <div class="service-cards-grid" id="serviceCardsGrid">
+                    <!-- Service cards will be populated by JavaScript -->
+                </div>
+
+                <!-- Detailed Service Content -->
+                <div id="serviceDetailContent" class="service-detail-content hidden">
+                    <!-- Detailed content will be populated when service card is clicked -->
+                </div>
+
+                <!-- Composite Performance Index -->
+                <div class="card composite-index">
+                    <div class="card__header">
+                        <h3>Composite HWC Performance Index</h3>
+                    </div>
+                    <div class="card__body">
+                        <div class="table-responsive">
+                            <table class="composite-table">
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th>Weight</th>
+                                        <th>Score (%)</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>MCH (Mother &amp; Child Health)</strong></td>
+                                        <td>30%</td>
+                                        <td class="score-cell">82%</td>
+                                        <td><span class="status status--success">🟢 Good</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>FP (Family Planning)</strong></td>
+                                        <td>10%</td>
+                                        <td class="score-cell">65%</td>
+                                        <td><span class="status status--warning">🟡 Moderate</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>CD (Communicable Diseases)</strong></td>
+                                        <td>15%</td>
+                                        <td class="score-cell">70%</td>
+                                        <td><span class="status status--warning">🟡 Moderate</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>NCD (Non-Communicable Diseases)</strong></td>
+                                        <td>20%</td>
+                                        <td class="score-cell">78%</td>
+                                        <td><span class="status status--warning">🟡 Moderate</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Other Services</strong></td>
+                                        <td>25%</td>
+                                        <td class="score-cell">74%</td>
+                                        <td><span class="status status--warning">🟡 Moderate</span></td>
+                                    </tr>
+                                    <tr class="overall-row">
+                                        <td><strong>Overall Performance</strong></td>
+                                        <td>100%</td>
+                                        <td class="score-cell"><strong>74.8%</strong></td>
+                                        <td><span class="status status--warning">🟡 Moderate</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHO Directory Tab -->
+            <div id="cho-directory" class="tab-pane">
+                <!-- Coordinator Structure -->
+                <div class="card">
+                    <div class="card__header">
+                        <h3>Coordinator Supervision Structure</h3>
+                    </div>
+                    <div class="card__body">
+                        <div class="supervision-structure">
+                            <div class="structure-block">
+                                <h4>KHARUPETIA</h4>
+                                <div class="coordinators">
+                                    <div class="coordinator-item">MOHIBUL ISLAM (20 CHOs)</div>
+                                    <div class="coordinator-item">ABU KHAYER IFTIKAR (14 CHOs)</div>
+                                </div>
+                            </div>
+                            <div class="structure-block">
+                                <h4>PATHARIGHAT</h4>
+                                <div class="coordinators">
+                                    <div class="coordinator-item">PRATAP RAJBONGSHI (11 CHOs)</div>
+                                    <div class="coordinator-item">NIRANJAN SAHARIAH (6 CHOs)</div>
+                                </div>
+                            </div>
+                            <div class="structure-block">
+                                <h4>SIPAJHAR</h4>
+                                <div class="coordinators">
+                                    <div class="coordinator-item">BALODEV MEDHI (15 CHOs)</div>
+                                    <div class="coordinator-item">MUNINDRA SALOI (11 CHOs)</div>
+                                </div>
+                            </div>
+                            <div class="structure-block">
+                                <h4>JALJALI</h4>
+                                <div class="coordinators">
+                                    <div class="coordinator-item">SAGARIKA PRITY BARUAH (13 CHOs)</div>
+                                    <div class="coordinator-item">PRIYANKA DAS (10 CHOs)</div>
+                                    <div class="coordinator-item">MOHIBUL ISLAM (1 CHO)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Directory Filters -->
+                <div class="card">
+                    <div class="card__header">
+                        <h3>CHO Directory</h3>
+                        <button id="exportCSV" class="btn btn--primary">Export CSV</button>
+                    </div>
+                    <div class="card__body">
+                        <div class="directory-filters">
+                            <input type="text" id="searchCHO" class="form-control" placeholder="Search CHO...">
+                            <select id="blockDirectoryFilter" class="form-control">
+                                <option value="all">All Blocks</option>
+                                <option value="kharupetia">KHARUPETIA</option>
+                                <option value="patharighat">PATHARIGHAT</option>
+                                <option value="sipajhar">SIPAJHAR</option>
+                                <option value="jaljali">JALJALI</option>
+                            </select>
+                            <select id="statusFilter" class="form-control">
+                                <option value="all">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="choDirectory" class="directory-table">
+                                <thead>
+                                    <tr>
+                                        <th>CHO Name</th>
+                                        <th>Block</th>
+                                        <th>Facility</th>
+                                        <th>Coordinator</th>
+                                        <th>Activity Status</th>
+                                        <th>Contact</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="choDirectoryTable">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Monitor Tab -->
+            <div id="performance-monitor" class="tab-pane">
+                <!-- Enhanced Filters Section -->
+                <div class="filters-section enhanced-filters">
+                    <h3>Performance Monitor Filters</h3>
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label class="form-label">District</label>
+                            <select id="perfDistrictFilter" class="form-control">
+                                <option value="darrang">Darrang District</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Block</label>
+                            <select id="perfBlockFilter" class="form-control">
+                                <option value="all">All Blocks</option>
+                                <option value="kharupetia">KHARUPETIA</option>
+                                <option value="patharighat">PATHARIGHAT</option>
+                                <option value="sipajhar">SIPAJHAR</option>
+                                <option value="jaljali">JALJALI</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">HWC</label>
+                            <select id="perfHwcFilter" class="form-control">
+                                <option value="all">All HWCs</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Week</label>
+                            <select id="performanceWeekFilter" class="form-control">
+                                <option value="week3">Week 3</option>
+                                <option value="week2">Week 2</option>
+                                <option value="week1">Week 1</option>
+                                <option value="baseline">Baseline</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Time Period</label>
+                            <select id="perfTimePeriodFilter" class="form-control">
+                                <option value="weekly">Weekly</option>
+                                <option value="daily">Daily</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="filter-actions">
+                        <button id="applyPerfFilters" class="btn btn--primary btn--lg">Apply Filters</button>
+                        <button id="resetPerfFilters" class="btn btn--secondary">Reset</button>
+                        <button id="downloadPerfExcel" class="btn btn--success excel-btn">📊 Export Excel</button>
+                    </div>
+                </div>
+
+                <!-- Indicator Category Cards -->
+                <div class="indicator-cards-section">
+                    <h3>Performance Indicators</h3>
+                    <div class="indicator-cards-grid" id="indicatorCardsGrid">
+                        <!-- Indicator cards will be populated -->
+                    </div>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="kpi-cards">
+                    <div class="card kpi-card">
+                        <div class="kpi-value" id="activityRateKPI">48.5%</div>
+                        <div class="kpi-label">Activity Rate</div>
+                        <div class="kpi-trend trend-down">↓ 36% decline</div>
+                    </div>
+                    <div class="card kpi-card">
+                        <div class="kpi-value" id="opdKPI">222</div>
+                        <div class="kpi-label">Total OPD</div>
+                        <div class="kpi-trend trend-down">↓ from baseline</div>
+                    </div>
+                    <div class="card kpi-card">
+                        <div class="kpi-value" id="abhaKPI">43</div>
+                        <div class="kpi-label">ABHA Registrations</div>
+                        <div class="kpi-trend trend-critical">Critical low</div>
+                    </div>
+                    <div class="card kpi-card">
+                        <div class="kpi-value" id="consistencyKPI">45.2%</div>
+                        <div class="kpi-label">Consistency Score</div>
+                        <div class="kpi-trend trend-stable">Stable</div>
+                    </div>
+                </div>
+
+                <!-- Performance Heatmap -->
+                <div class="card">
+                    <div class="card__header">
+                        <h3>Geographic Performance Heatmap</h3>
+                    </div>
+                    <div class="card__body">
+                        <div class="heatmap-container">
+                            <div class="heatmap-block heatmap-excellent" data-intensity="78.7">KHARUPETIA<br>78.7%</div>
+                            <div class="heatmap-block heatmap-critical" data-intensity="22.1">PATHARIGHAT<br>22.1%</div>
+                            <div class="heatmap-block heatmap-moderate" data-intensity="48.1">SIPAJHAR<br>48.1%</div>
+                            <div class="heatmap-block heatmap-good" data-intensity="54.2">JALJALI<br>54.2%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rankings -->
+                <div class="rankings-section">
+                    <div class="card">
+                        <div class="card__header">
+                            <h3>Activity Rate Ranking</h3>
+                            <div class="formula">Formula: (Active CHOs / Total CHOs) × 100</div>
+                        </div>
+                        <div class="card__body">
+                            <canvas id="activityRankingChart" height="300"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card__header">
+                            <h3>Performance Ranking</h3>
+                            <div class="formula">Formula: Activity 40% + OPD 30% + Consistency 20% + ABHA 10%</div>
+                        </div>
+                        <div class="card__body">
+                            <canvas id="performanceRankingChart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts & Notifications Tab -->
+            <div id="alerts" class="tab-pane">
+                <!-- Enhanced Filters -->
+                <div class="filters-section enhanced-filters">
+                    <h3>Alerts &amp; Notifications Filters</h3>
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label class="form-label">Block</label>
+                            <select id="alertBlockFilter" class="form-control">
+                                <option value="all">All Blocks</option>
+                                <option value="kharupetia">KHARUPETIA</option>
+                                <option value="patharighat">PATHARIGHAT</option>
+                                <option value="sipajhar">SIPAJHAR</option>
+                                <option value="jaljali">JALJALI</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Alert Type</label>
+                            <select id="alertTypeFilter" class="form-control">
+                                <option value="all">All Alerts</option>
+                                <option value="critical">Critical</option>
+                                <option value="warning">Warning</option>
+                                <option value="info">Info</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="filter-actions">
+                        <button id="applyAlertFilters" class="btn btn--primary">Apply Filters</button>
+                        <button id="resetAlertFilters" class="btn btn--secondary">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Critical Coordinators -->
+                <div class="alert alert--error">
+                    <h3>🚨 Critical Coordinators - Immediate Action Required</h3>
+                    <div class="alert-content">
+                        <div class="alert-item">
+                            <strong>PRATAP RAJBONGSHI</strong> - 2.3% Activity Rate
+                            <button class="btn btn--sm btn--outline" onclick="sendQuickNotification('PRATAP RAJBONGSHI')">Send Notification</button>
+                        </div>
+                        <div class="alert-item">
+                            <strong>BALODEV MEDHI</strong> - 5.0% Activity Rate
+                            <button class="btn btn--sm btn--outline" onclick="sendQuickNotification('BALODEV MEDHI')">Send Notification</button>
+                        </div>
+                        <div class="alert-action">Recommended: Immediate intervention &amp; supervision required</div>
+                    </div>
+                </div>
+
+                <!-- Low Performance -->
+                <div class="alert alert--warning">
+                    <h3>⚠️ Low Performance Alert</h3>
+                    <div class="alert-content">
+                        <div class="alert-item">
+                            <strong>SAGARIKA PRITY BARUAH</strong> - 15.4% Activity Rate
+                        </div>
+                        <div class="alert-action">Recommended: Structured support &amp; follow-up needed</div>
+                    </div>
+                </div>
+
+                <!-- Top Performers -->
+                <div class="alert alert--success">
+                    <h3>🏆 Top Performers Recognition</h3>
+                    <div class="alert-content">
+                        <div class="alert-item">
+                            <strong>MUNINDRA SALOI</strong> - 65.9% Activity Rate
+                        </div>
+                        <div class="alert-item">
+                            <strong>ABU KHAYER IFTIKAR</strong> - 51.8% Activity Rate
+                        </div>
+                        <div class="alert-action">Recognition: Excellent performance, continue best practices</div>
+                    </div>
+                </div>
+
+                <!-- Red Zone Block -->
+                <div class="alert alert--error">
+                    <h3>🔴 Red Zone Block Alert</h3>
+                    <div class="alert-content">
+                        <div class="alert-item">
+                            <strong>PATHARIGHAT Block</strong> - 22.1% Activity Rate
+                        </div>
+                        <div class="alert-action">Critical risk - needs supervision &amp; retraining</div>
+                    </div>
+                </div>
+
+                <!-- Training Alerts -->
+                <div class="alert alert--info">
+                    <h3>📚 Training &amp; Development Alerts</h3>
+                    <div class="alert-content">
+                        <div class="alert-item">ABHA registration extremely low (43 total) - Training needed</div>
+                        <div class="alert-item">Activity decline: 76.2% → 48.5% (36% drop) - Review protocols</div>
+                        <div class="alert-item">45 CHOs inactive in ≥3 out of 4 periods</div>
+                    </div>
+                </div>
+
+                <!-- Notification Integration Section -->
+                <div class="card notification-integration">
+                    <div class="card__header">
+                        <h3>📧 Notification Integration</h3>
+                    </div>
+                    <div class="card__body">
+                        <div class="notification-methods">
+                            <div class="notification-method">
+                                <h4>📧 Email Notifications</h4>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enableEmail" checked> Enable Email
+                                </label>
+                                <select id="emailTemplate" class="form-control">
+                                    <option value="1">Inactive CHO Alert</option>
+                                    <option value="2">Performance Recognition</option>
+                                    <option value="3">Service Gap Alert</option>
+                                    <option value="4">Training Reminder</option>
+                                    <option value="5">Data Entry Reminder</option>
+                                    <option value="6">Weekly Summary Report</option>
+                                </select>
+                            </div>
+                            <div class="notification-method">
+                                <h4>📱 SMS Notifications</h4>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enableSMS"> Enable SMS
+                                </label>
+                                <select id="smsTemplate" class="form-control">
+                                    <option value="1">Inactive CHO Alert</option>
+                                    <option value="2">Performance Recognition</option>
+                                    <option value="3">Service Gap Alert</option>
+                                </select>
+                            </div>
+                            <div class="notification-method">
+                                <h4>👍 WhatsApp Notifications</h4>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enableWhatsApp"> Enable WhatsApp
+                                </label>
+                                <select id="whatsappTemplate" class="form-control">
+                                    <option value="1">Inactive CHO Alert</option>
+                                    <option value="2">Performance Recognition</option>
+                                    <option value="3">Service Gap Alert</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="notification-recipients">
+                            <h4>Select Recipients</h4>
+                            <div class="recipient-options">
+                                <label><input type="radio" name="recipientLevel" value="individual" checked> Individual CHO</label>
+                                <label><input type="radio" name="recipientLevel" value="block"> Block Level</label>
+                                <label><input type="radio" name="recipientLevel" value="facility"> Facility Level</label>
+                                <label><input type="radio" name="recipientLevel" value="district"> District Level</label>
+                            </div>
+                            <select id="recipientSelect" class="form-control" multiple size="5">
+                                <option value="all">All Recipients</option>
+                            </select>
+                        </div>
+
+                        <div class="notification-frequency">
+                            <h4>Notification Frequency</h4>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="dailyAlerts"> Daily Alerts
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="weeklyAlerts" checked> Weekly Summary
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="realtimeAlerts" checked> Real-time Critical Alerts
+                            </label>
+                        </div>
+
+                        <div class="notification-actions">
+                            <button id="sendEmailBtn" class="btn btn--primary">📧 Send Email</button>
+                            <button id="sendSMSBtn" class="btn btn--primary">📱 Send SMS</button>
+                            <button id="sendWhatsAppBtn" class="btn btn--success">👍 Send WhatsApp</button>
+                            <button id="scheduleNotification" class="btn btn--outline">⏰ Schedule for Later</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notification Log -->
+                <div class="card">
+                    <div class="card__header">
+                        <h3>📜 Notification History Log</h3>
+                    </div>
+                    <div class="card__body">
+                        <div class="table-responsive">
+                            <table class="notification-log-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date/Time</th>
+                                        <th>Type</th>
+                                        <th>Recipients</th>
+                                        <th>Template</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="notificationLogBody">
+                                    <tr>
+                                        <td>Oct 30, 2024 10:30 AM</td>
+                                        <td><span class="badge badge-email">📧 Email</span></td>
+                                        <td>52 CHOs</td>
+                                        <td>Inactive CHO Alert</td>
+                                        <td><span class="status status--success">Sent</span></td>
+                                        <td><button class="btn btn--sm btn--outline">View Details</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Oct 29, 2024 3:45 PM</td>
+                                        <td><span class="badge badge-whatsapp">👍 WhatsApp</span></td>
+                                        <td>PATHARIGHAT Block</td>
+                                        <td>Training Reminder</td>
+                                        <td><span class="status status--success">Sent</span></td>
+                                        <td><button class="btn btn--sm btn--outline">View Details</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enhanced Follow-up Tracker -->
+                <div class="card">
+                    <div class="card__header">
+                        <h3>Enhanced Follow-up Intervention Tracker</h3>
+                        <div>
+                            <select id="trackerStatusFilter" class="form-control" style="width: auto; display: inline-block;">
+                                <option value="all">All Status</option>
+                                <option value="pending">Pending</option>
+                                <option value="inprogress">In Progress</option>
+                                <option value="resolved">Resolved</option>
+                            </select>
+                            <button class="btn btn--success btn--sm">📊 Export Tracker</button>
+                        </div>
+                    </div>
+                    <div class="card__body">
+                        <div class="table-responsive">
+                            <table class="followup-table">
+                                <thead>
+                                    <tr>
+                                        <th>Alert Type</th>
+                                        <th>Facility/CHO</th>
+                                        <th>Date Raised</th>
+                                        <th>Severity</th>
+                                        <th>Action Assigned</th>
+                                        <th>Assigned To</th>
+                                        <th>Status</th>
+                                        <th>Notification Sent</th>
+                                        <th>Follow-up Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="followupTrackerBody">
+                                    <tr>
+                                        <td>Low Activity</td>
+                                        <td>PATHARIGHAT Block</td>
+                                        <td>Sep 5, 2024</td>
+                                        <td><span class="severity-dot severity-high"></span> High</td>
+                                        <td>Field supervision</td>
+                                        <td>District Coordinator</td>
+                                        <td><span class="status status--warning">In Progress</span></td>
+                                        <td><span class="status status--success">✓ Oct 30</span></td>
+                                        <td>Nov 5, 2024</td>
+                                        <td>
+                                            <button class="btn btn--sm btn--outline" onclick="editFollowup(1)">Edit</button>
+                                            <button class="btn btn--sm btn--success" onclick="markResolved(1)">Resolve</button>
+                                            <button class="btn btn--sm btn--primary" onclick="sendReminder(1)">Remind</button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>ABHA Registration</td>
+                                        <td>District Level</td>
+                                        <td>Sep 1, 2024</td>
+                                        <td><span class="severity-dot severity-medium"></span> Medium</td>
+                                        <td>Training program</td>
+                                        <td>Training Officer</td>
+                                        <td><span class="status status--error">Delayed</span></td>
+                                        <td><span class="status status--success">✓ Oct 28</span></td>
+                                        <td>Nov 12, 2024</td>
+                                        <td>
+                                            <button class="btn btn--sm btn--outline" onclick="editFollowup(2)">Edit</button>
+                                            <button class="btn btn--sm btn--success" onclick="markResolved(2)">Resolve</button>
+                                            <button class="btn btn--sm btn--primary" onclick="sendReminder(2)">Remind</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Drill-down Modal for Charts -->
+        <div id="drilldownModal" class="modal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h3 id="drilldownTitle">Detailed Breakdown</h3>
+                    <button class="modal-close" onclick="closeDrilldownModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="drilldownContent">
+                        <!-- Content will be populated dynamically -->
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn--success" onclick="exportDrilldownData()">📊 Export to CSV</button>
+                        <button class="btn btn--secondary" onclick="closeDrilldownModal()">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Statistics Modal -->
+        <div id="activeStatsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>CHO Activity Status - Week 3</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-filters">
+                        <select id="modalBlockFilter" class="form-control">
+                            <option value="all">All Blocks</option>
+                            <option value="kharupetia">KHARUPETIA</option>
+                            <option value="patharighat">PATHARIGHAT</option>
+                            <option value="sipajhar">SIPAJHAR</option>
+                            <option value="jaljali">JALJALI</option>
+                        </select>
+                        <select id="modalCoordinatorFilter" class="form-control">
+                            <option value="all">All Coordinators</option>
+                        </select>
+                        <button id="resetModalFilters" class="btn btn--secondary">Reset</button>
+                    </div>
+                    <div class="stats-columns">
+                        <div class="stats-column active-column">
+                            <h4>Active CHOs <span id="activeCount">(49)</span></h4>
+                            <div id="activeList" class="cho-list active-list">
+                            </div>
+                        </div>
+                        <div class="stats-column inactive-column">
+                            <h4>Inactive CHOs <span id="inactiveCount">(52)</span></h4>
+                            <div id="inactiveList" class="cho-list inactive-list">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bulk-notification-actions">
+                        <h4>Bulk Notification Actions</h4>
+                        <div class="bulk-action-buttons">
+                            <button class="btn btn--primary" onclick="sendBulkNotification('email', 'inactive')">
+                                📧 Send Bulk Email to All Inactive
+                            </button>
+                            <button class="btn btn--primary" onclick="sendBulkNotification('sms', 'inactive')">
+                                📱 Send Bulk SMS to All Inactive
+                            </button>
+                            <button class="btn btn--success" onclick="sendBulkNotification('whatsapp', 'inactive')">
+                                👍 Send Bulk WhatsApp to All Inactive
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Active Stats Button -->
+        <button id="activeStatsBtn" class="floating-btn pulsing">
+            <span>Active Statistics</span>
+        </button>
+
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+            <p>© DigiFacility Team – DPH_CoE</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
